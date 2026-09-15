@@ -77,41 +77,42 @@ fde_agent = graph_builder.compile(checkpointer= MemorySaver())
 
 
 # Chat loop testing panel 
-print("FDE Supply chain Orchestrator State Mahcine ")
-print(f"-- Configured execution : [LLM : {AGENT_LLM_SETTING}] -> [Embeddings : {os.getenv("Embeddings_model",'LOCAL')}]")
+if __name__ == "__main__":
+    print("FDE Supply chain Orchestrator State Mahcine ")
+    print(f"-- Configured execution : [LLM : {AGENT_LLM_SETTING}] -> [Embeddings : {os.getenv("Embeddings_model",'LOCAL')}]")
 
-prompt_path = project_root / "src" / "prompts" / "system_prompt.txt"
+    prompt_path = project_root / "src" / "prompts" / "system_prompt.txt"
 
-try:
-    with open(prompt_path, "r", encoding="utf-8") as f:
-        system_instructions = f.read()
-except FileNotFoundError:
-    print(f"Error : could not find prompt path - {prompt_path}")
-    system_instructions = "You are a helpful AI assistant."
+    try:
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            system_instructions = f.read()
+    except FileNotFoundError:
+        print(f"Error : could not find prompt path - {prompt_path}")
+        system_instructions = "You are a helpful AI assistant."
 
-system_prompt = SystemMessage(content=system_instructions)
+    system_prompt = SystemMessage(content=system_instructions)
 
-thread_config = {"configurable": {"thread_id":"production_test_1"}}
-fde_agent.invoke({"messages": [system_prompt]}, config=thread_config)
+    thread_config = {"configurable": {"thread_id":"production_test_1"}}
+    fde_agent.invoke({"messages": [system_prompt]}, config=thread_config)
 
-while True:
-    user_input = input("\\ Dispatcher > ")
-    if user_input.lower() in ["exit", "quit"]:
-        break;
+    while True:
+        user_input = input("\\ Dispatcher > ")
+        if user_input.lower() in ["exit", "quit"]:
+            break;
 
-    events = fde_agent.stream({
-        "messages": [("user", user_input)]
-    },
-    config= thread_config , stream_mode= "updates"
-    )
+        events = fde_agent.stream({
+            "messages": [("user", user_input)]
+        },
+        config= thread_config , stream_mode= "updates"
+        )
 
-    for event in events:
-        for node_name , node_state in event.items():
-            if node_name == "tools":
-                print("[system] Retrieveing data elements via ToolNode")
-            elif node_name == "reasoner":
-                latest_msg = node_state["messages"][-1]
-                if latest_msg.content:
-                    print(f"\n FDE Agent : \n {latest_msg.content}")
+        for event in events:
+            for node_name , node_state in event.items():
+                if node_name == "tools":
+                    print("[system] Retrieveing data elements via ToolNode")
+                elif node_name == "reasoner":
+                    latest_msg = node_state["messages"][-1]
+                    if latest_msg.content:
+                        print(f"\n FDE Agent : \n {latest_msg.content}")
 
 

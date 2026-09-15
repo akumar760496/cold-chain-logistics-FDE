@@ -65,7 +65,7 @@ else:
 
     try:
         import streamlit as st
-        if st.runtime.exist():
+        if st.runtime.exists():
             embeddings = get_cached_huggingface_embeddings(local_model_target)
         else:
             from langchain_huggingface import HuggingFaceEmbeddings
