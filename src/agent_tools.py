@@ -12,6 +12,7 @@ from langchain_core.tools import tool
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from streamlit import cursor
+from torchgen import local
 
 #from scripts.ingest_sop_pinecone import EMBEDDINGS_MODEL_SETTINGS, INDEX_NAME, PINECONE_API_KEY
 
@@ -23,6 +24,25 @@ project_root = script_dir.parent
 load_dotenv(dotenv_path=project_root / ".env")
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+
+def get_cached_huggingface_embeddings(model_name:str):
+    """
+    Loads and locks the Hugging Face model weight into the machine global RAM
+    If called again during the subsequent script rerun , it returns instantly 
+    """
+
+    import streamlit as st
+    @st.cache_resource(show_spinner=False)
+    def _load_model(name:str):
+        print(f"Memory speed : Permanently caching local model {name}")
+        from langchain_huggingface import HuggingFaceEmbeddings
+        return HuggingFaceEmbeddings(
+            model_name = name,
+            model_kwargs = {"device": "cpu"}
+        )
+    return _load_model(model_name)
+
+
 EMBEDDINGS_MODEL_SETTINGS = os.getenv("Embeddings_model", "LOCAL").strip().upper()
 
 db_host = os.getenv("SQL_SERVER_HOST","localhost")
@@ -39,15 +59,28 @@ if EMBEDDINGS_MODEL_SETTINGS == "OPENAI":
     embeddings = OpenAIEmbeddings()
     INDEX_NAME = "fde-sop-index-openai"
 else:
+
     local_model_target = os.getenv("Local_Embetting_Model", "BAAI/bge-m3").strip()
     print(f"Model: Connecting to Local Fallback embedding [{local_model_target}] Index 1024 dim")
 
-    from langchain_huggingface import HuggingFaceEmbeddings
-    embeddings = HuggingFaceEmbeddings(
-        model_name=local_model_target,
-        model_kwargs={"device": "cpu"},
-        encode_kwargs={"batch_size": 32, "normalize_embeddings": True}
-        )
+    try:
+        import streamlit as st
+        if st.runtime.exist():
+            embeddings = get_cached_huggingface_embeddings(local_model_target)
+        else:
+            from langchain_huggingface import HuggingFaceEmbeddings
+            embeddings = HuggingFaceEmbeddings(
+                model_name=local_model_target,
+                model_kwargs={"device": "cpu"},
+                encode_kwargs={"batch_size": 32, "normalize_embeddings": True}
+            )
+    except ImportError:
+        from langchain_huggingface import HuggingFaceEmbeddings
+        embeddings = HuggingFaceEmbeddings(
+            model_name=local_model_target,
+            model_kwargs={"device": "cpu"},
+            encode_kwargs={"batch_size": 32, "normalize_embeddings": True}
+        )    
     INDEX_NAME = "fde-sop-index-local"
     TARGET_DIMENSION = 1024
 
