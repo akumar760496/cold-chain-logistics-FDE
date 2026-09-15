@@ -92,7 +92,7 @@ retriever = vector_store.as_retriever(search_kwargs={"k":2})
 @tool
 def query_telemetry_db(sql_query:str)-> str:
     """
-    Execute a SQL SELECT query against the FDE_VIEW.VW_ACTIVATE_FLEET view.
+    Execute a SQL SELECT query against the FDE_VIEWS.VW_ACTIVATE_FLEET view.
     Columns available:
     Timestamp, Latitude, Longitude, Current_Temperature_C, Cargo_Condition_Code,
     Risk_Classification, Delay_Probability, Port_Congestion_Level, Route_Risk_Index.
@@ -100,6 +100,7 @@ def query_telemetry_db(sql_query:str)-> str:
     """
 
     connection_string = (
+        f"DRIVER={{ODBC Driver 18 for SQL Server}};"
         f"SERVER={db_host},{db_port};"
         f"DATABASE=master;"
         f"UID={db_user};"
